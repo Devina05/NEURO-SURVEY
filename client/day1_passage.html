@@ -1,0 +1,109 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>Day1 Passage</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  #timer {
+    position: fixed;
+    top: 20px;
+    right: 30px;
+    font-size: 20px;
+    font-weight: bold;
+    color: #e11d48;
+  }
+</style>
+</head>
+
+<body>
+<div class="container">
+  <h2>Day 1 — Passage Reading</h2>
+
+  <div id="timer"></div>
+
+  <div id="content" class="card">
+      <p class="small">Press Start to begin the 5-minute reading timer.</p>
+      <button id="startBtn" class="btn">Start</button>
+
+      <div id="passageBox" style="display:none; margin-top:20px;">
+         <div id="passageText" style="white-space:pre-wrap;"></div>
+
+         <button id="toQuizBtn" class="btn" style="margin-top:20px; display:none;">
+           Go to Questions
+         </button>
+      </div>
+  </div>
+</div>
+
+<script src="js/common.js"></script>
+
+<script>
+// -------- Prevent exiting page --------
+window.onbeforeunload = function() {
+  return "You cannot leave during the reading session.";
+};
+
+// -------- Fetch passage --------
+async function fetchPassage() {
+  const res = await fetch(API + '/day1/passage', { headers: authHeaders() });
+  if (res.ok) {
+    const data = await res.json();
+    document.getElementById("passageText").innerText = data.passage;
+  }
+}
+
+// -------- Timer logic --------
+function startTimer(durationMs) {
+  const startTime = Date.now();
+  const timer = document.getElementById("timer");
+
+  const interval = setInterval(() => {
+    const elapsed = Date.now() - startTime;
+    const remaining = durationMs - elapsed;
+
+    if (remaining <= 0) {
+      clearInterval(interval);
+      timer.innerText = "Time's up!";
+      // Auto-hide passage
+      document.getElementById("passageText").innerText = "Time is up — passage hidden.";
+      document.getElementById("toQuizBtn").style.display = "block";
+      return;
+    }
+
+    const seconds = Math.ceil(remaining / 1000);
+    timer.innerText = "Time left: " + seconds + "s";
+  }, 200);
+}
+
+// ---------- Start button ----------
+document.getElementById("startBtn").onclick = async () => {
+  const startBtn = document.getElementById("startBtn");
+  const passageBox = document.getElementById("passageBox");
+
+  startBtn.style.display = "none";    // hide start button
+  passageBox.style.display = "block"; // show passage section
+
+  // Fetch passage & start timer
+  const res = await fetch(API + "/day1/passage", { headers: authHeaders() });
+  const j = await res.json();
+  document.getElementById("passageText").innerText = j.passage;
+
+  startTimer(5 * 60 * 1000); // 5 minutes = 300,000 ms
+
+  // Show "Go to questions" button (always available after passage shown)
+  document.getElementById("toQuizBtn").style.display = "block";
+};
+
+// ---------- Go to Questions button ----------
+document.getElementById("toQuizBtn").onclick = () => {
+  window.onbeforeunload = null; // allow leaving
+  window.location = "day1_quiz.html";
+};
+
+// Load passage in background (but hidden until start)
+fetchPassage();
+</script>
+
+</body>
+</html>

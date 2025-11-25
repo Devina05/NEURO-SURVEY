@@ -1,0 +1,127 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>Profile</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  .thankyou-box {
+    text-align: center;
+    padding: 40px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(2,6,23,0.08);
+    font-size: 22px;
+    color: #111;
+    margin-top: 20px;
+  }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <h2>Your Profile</h2>
+  <div id="root"></div>
+</div>
+
+<script src="js/common.js"></script>
+
+<script>
+// Prevent back navigation
+history.pushState(null, null, location.href);
+window.onpopstate = () => history.go(1);
+
+async function init() {
+
+  // ------------ Load participant data ------------
+  const res = await fetch(API + '/me', { headers: authHeaders() });
+  if (!res.ok) {
+    alert('Login first');
+    window.location = 'login.html';
+    return;
+  }
+
+  const p = await res.json();
+  const root = document.getElementById("root");
+
+  // ------------ IF DAY-2 DONE → THANK YOU PAGE ------------
+  if (p.day2Score !== undefined && p.day2Score !== null) {
+    root.innerHTML = `
+      <div class="thankyou-box">
+        <strong>Thank you for participating!</strong>
+        <p class="small">Your responses and scores have been recorded.</p>
+        <p class="small">Day 1 Score: <b>${p.day1Score ?? '-'}</b></p>
+        <p class="small">Day 2 Score: <b>${p.day2Score ?? '-'}</b></p>
+      </div>
+    `;
+    return;  // Stop here → do NOT show group popup
+  }
+
+  // ------------ BEFORE DAY-2 (Normal Profile) ------------
+  let html = `
+    <div class="card">
+      <strong>${p.name}</strong>
+      <div class="small">
+        Group: ${p.group || '-'} | Category: ${p.category || '-'}
+      </div>
+      <div class="small">
+        Day1: ${p.day1Score ?? '-'} | Day2: ${p.day2Score ?? '-'}
+      </div>
+  `;
+
+  // ------------ Day-2 Button Logic ------------
+  if (p.day1Score && !p.day2Score) {
+    const check = await fetch(API + "/day2/available", { headers: authHeaders() });
+    const data = await check.json();
+
+    if (data.available) {
+      html += `
+        <div style="margin-top: 15px;">
+          <button class="btn" onclick="goToDay2()">Start Day 2 Test</button>
+        </div>
+      `;
+    } else {
+      html += `
+        <div style="margin-top: 15px;" class="small">
+          Day 2 will unlock after 24 hours.
+        </div>
+      `;
+    }
+  }
+
+  html += `</div>`;
+  root.innerHTML = html;
+
+  // ------------ Show Group Popup ONLY BEFORE DAY-2 DONE ------------
+  if (!p.day2Score && p.group) {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+
+    modal.innerHTML = `
+      <div class="card">
+        <h3>Group: ${p.group.toUpperCase()}</h3>
+        <p>
+          ${p.group === 'ai'
+            ? "You MAY use AI for Day-1. Day-2 is NO-AI for everyone."
+            : "You MUST NOT use AI for Day-1. Day-2 is NO-AI for everyone."
+          }
+        </p>
+        <p><button class="btn" id="closeModal">Close</button></p>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    document.getElementById('closeModal').onclick = () => modal.remove();
+  }
+}
+
+function goToDay2() {
+  window.location = "day2_quiz.html";
+}
+
+init();
+</script>
+
+</body>
+</html>

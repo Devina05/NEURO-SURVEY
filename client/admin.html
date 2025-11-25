@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>Admin</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+<div class="container">
+  <h2>Admin Dashboard</h2>
+  <div id="root"></div>
+</div>
+
+<script src="js/common.js"></script>
+
+<script src="js/common.js"></script>
+<script>
+async function init() {
+  try {
+    const res = await fetch(API + '/admin/all');
+    if (!res.ok) throw new Error("API request failed");
+
+    const data = await res.json();
+
+    let html = `
+      <table class="card" style="width:100%; border-collapse:collapse;">
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Group</th>
+          <th>Category</th>
+          <th>Initial Score</th>
+          <th>Day 1 Score</th>
+          <th>Day 2 Score</th>
+        </tr>
+    `;
+
+    data.forEach(p => {
+      html += `
+        <tr>
+          <td>${p.name}</td>
+          <td>${p.email}</td>
+          <td>${p.group ?? "-"}</td>
+          <td>${p.category ?? "-"}</td>
+          <td>${p.initialScore ?? "-"}</td>
+          <td>${p.day1Score ?? "-"}</td>
+          <td>${p.day2Score ?? "-"}</td>
+        </tr>
+      `;
+    });
+
+    html += "</table>";
+    document.getElementById('root').innerHTML = html;
+
+  } catch (err) {
+    console.error(err);
+    document.getElementById('root').innerHTML =
+      "<div class='card'>Unable to load admin data.</div>";
+  }
+}
+
+init();
+</script>

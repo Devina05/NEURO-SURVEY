@@ -1,0 +1,140 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>Day1 Quiz</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+<div class="container">
+  <h2>Day 1 — Quiz</h2>
+  <div id="root"></div>
+</div>
+
+<script src="js/common.js"></script>
+
+<script>
+// -------- Disable back --------
+history.pushState(null, null, location.href);
+window.onpopstate = () => history.go(1);
+
+// -------- Day 1 Questions --------
+// Added “None of the above” to all questions
+const QUESTIONS = [
+  {
+    id:"d1_q1",
+    text:"At what altitude are cloud forests typically found?",
+    choices:["500–1,000 meters","1,500–3,000 meters","3,500–5,000 meters","None of the above"],
+    answer:"1,500–3,000 meters"
+  },
+  {
+    id:"d1_q2",
+    text:"What is the main source of moisture for cloud forests?",
+    choices:["Heavy rainfall","Groundwater absorption","Mist and cloud condensation","None of the above"],
+    answer:"Mist and cloud condensation"
+  },
+  {
+    id:"d1_q3",
+    text:"Which type of plants commonly grow on the surface of other plants in cloud forests?",
+    choices:["Epiphytes","Shrubs","Mangroves","None of the above"],
+    answer:"Epiphytes"
+  },
+  {
+    id:"d1_q4",
+    text:"Why do cloud forests have lower evaporation rates?",
+    choices:["Deep valleys trap water","Dense canopy traps moisture","Low sunlight reaches the forest floor","None of the above"],
+    answer:"Dense canopy traps moisture"
+  },
+  {
+    id:"d1_q5",
+    text:"Cloud forests help surrounding regions primarily by:",
+    choices:["Storing carbon dioxide","Capturing moisture for water supply","Producing large leaves","None of the above"],
+    answer:"Capturing moisture for water supply"
+  },
+  {
+    id:"d1_q6",
+    text:"What happens as clouds pass through the canopy?",
+    choices:["Leaves repel moisture","Leaves capture water droplets","Clouds dissolve completely","None of the above"],
+    answer:"Leaves capture water droplets"
+  },
+  {
+    id:"d1_q7",
+    text:"Why are cloud forests considered vulnerable to climate change?",
+    choices:["Cloud layers rise with higher temperatures","They receive too much rainfall","They are expanding rapidly","None of the above"],
+    answer:"Cloud layers rise with higher temperatures"
+  },
+  {
+    id:"d1_q8",
+    text:"Many cloud-forest species are at high risk because:",
+    choices:["They migrate seasonally","They exist only in specific humidity conditions","They grow quickly and unpredictably","None of the above"],
+    answer:"They exist only in specific humidity conditions"
+  },
+  {
+    id:"d1_q9",
+    text:"Which human activity is contributing to cloud forest loss?",
+    choices:["Afforestation","Urban gardening","Deforestation for farming","None of the above"],
+    answer:"Deforestation for farming"
+  },
+  {
+    id:"d1_q10",
+    text:"Which conservation action is mentioned in the passage?",
+    choices:["Increasing agriculture in mountains","Restoring nearby habitats","Encouraging cloud-forest tourism","None of the above"],
+    answer:"Restoring nearby habitats"
+  }
+];
+
+function render() {
+  const root = document.getElementById("root");
+  root.innerHTML = "";
+
+  QUESTIONS.forEach((q, idx) => {
+    const card = document.createElement("div");
+    card.className = "card";
+
+    card.innerHTML = `<div><strong>${idx + 1}. ${q.text}</strong></div>`;
+
+    q.choices.forEach((choice) => {
+      const opt = document.createElement("label");
+      opt.className = "small";
+      opt.innerHTML = `
+        <input type="radio" name="${q.id}" value="${choice.trim()}"> ${choice}
+      `;
+      card.appendChild(opt);
+    });
+
+    root.appendChild(card);
+  });
+
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.innerText = "Submit Day 1";
+  btn.onclick = submitQuiz;
+  root.appendChild(btn);
+}
+
+async function submitQuiz() {
+  let score = 0;
+
+  QUESTIONS.forEach(q => {
+    const sel = document.querySelector(`input[name="${q.id}"]:checked`);
+    if (sel && sel.value.trim() === q.answer.trim()) score++;
+  });
+
+  const res = await fetch(API + "/day1/submit", {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({score})
+  });
+
+  if (res.ok) {
+    alert("Day 1 submitted. Score: " + score);
+    window.location = "profile.html";
+  }
+}
+
+render();
+</script>
+
+</body>
+</html>

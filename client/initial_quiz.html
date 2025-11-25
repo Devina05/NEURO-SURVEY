@@ -1,0 +1,314 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>Initial Quiz</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+<div class="container">
+  <h2>Initial Quiz</h2>
+
+  <div id="quizRoot" class="card"></div>
+</div>
+
+<script src="js/common.js"></script>
+
+<script>
+// Full detailed questions:
+
+const QUESTIONS = [
+  {
+    id: "q1",
+    text: "Real-Life Bowls Problem",
+    description: `
+You have 3 glass bowls stacked inside each other in Basket A (smallest on top, largest at bottom).
+Goal: Move all bowls to Basket C using Basket B.
+
+Rules:
+• Only move one bowl at a time  
+• Never place a larger bowl on a smaller one  
+
+Which sequence is correct and legal?
+Option A 
+1.	Move smallest bowl from A → C
+2.	Move large bowl from A → B
+3.	Move smallest bowl from C → B
+4.	Move medium bowl from A → C
+5.	Move smallest bowl from B → A
+6.	Move large bowl from B → C
+7.	Move smallest bowl from A → C
+
+Option B 
+1.	Move smallest bowl from A → B
+2.	Move large bowl from A → C
+3.	Move smallest bowl from B → C
+4.	Move medium bowl from A → B
+5.	Move smallest bowl from C → A
+6.	Move large bowl from C → B
+7.	Move smallest bowl from A → B
+
+Option C 
+1.	Move medium bowl from A → C
+2.	Move smallest bowl from A → B
+3.	Move medium bowl from C → B
+4.	Move large bowl from A → C
+5.	Move smallest bowl from B → C
+6.	Move medium bowl from B → A
+7.	Move smallest bowl from C → A
+
+ Option D 
+1.	Move smallest bowl from A → C
+2.	Move medium bowl from A → B
+3.	Move smallest bowl from C → B
+4.	Move large bowl from A → C
+5.	Move smallest bowl from B → A
+6.	Move medium bowl from B → C
+7.	Move smallest bowl from A → C
+
+`,
+    choices: ["Option A", "Option B", "Option C", "Option D"],
+    answer: "Option D"
+  },
+
+  {
+    id: "q2",
+    text: "Urgent Packing Problem",
+    description: `
+You are packing items into a small bag with max weight 10 units.  
+Choose the optimal step-by-step strategy that uses Greedy by Value/Weight ratio.
+
+Items:
+• Water Bottle (4W, 9V)  
+• First Aid Kit (3W, 7V)  
+• Flashlight (2W, 5V)  
+• Book (5W, 4V)  
+
+Which option correctly uses Greedy-by-density?
+Option A
+1.	Pick Water Bottle first.
+2.	Pick Book, next highest value.
+3.	Ignore other items.
+4.	Stop.
+
+Option B
+1.	Calculate value density (value ÷ weight) for each item:
+o	Flashlight → 5/2 = 2.5
+o	First Aid Kit → 7/3 = 2.33
+o	Water Bottle → 9/4 = 2.25
+o	Book → 4/5 = 0.8
+2.	Pick the Flashlight.
+3.	Pick next: First Aid Kit.
+4.	Pick next: Water Bottle.
+Stop.
+
+Option C 
+1.	Pick Flashlight.
+2.	Pick First Aid Kit.
+3.	Pick Book.
+4.	Stop.
+
+Option D 
+1.	Compute densities:
+o	Flashlight → 5/2 = 2.5
+o	Water Bottle → 9/4 = 2.3 
+o	First Aid Kit → 7/3 = 2.2
+o	Book → 4/5 = 0.8
+2.	Picks Water Bottle.
+4.	Picks First Aid Kit
+5.	Picks Book .
+6.	Picks Flashlight last.
+
+`,
+    choices: ["Option A", "Option B", "Option C", "Option D"],
+    answer: "Option B"
+  },
+
+  {
+    id: "q3",
+    text: "Searching a Name in a Giant Library",
+    description: `
+You go to a huge library that looks like a shopping mall.
+There are 26 long shelves, each labeled with a letter from A to Z.
+People usually sit near the shelf that matches the first letter of their name.
+You’re here to find your friend “Riya”.
+Walking through the entire library from A → Z would take a long time.
+So you want to use a smart method to find her quickly
+
+Which searching method correctly applies divide-and-conquer (binary search style)?
+
+Option A
+1.	Go to  shelf M.
+2.	Compare your friend’s name “Riya” to M.
+3.	Ignore shelves A–M completely.
+4.	Move to the middle of the N–Z range.
+5.	Compare again and go to the correct sub-half.
+6.	Repeat.
+
+Option B
+1.	Start at Shelf A
+2.	Move to B, then C, then D…
+3.	Continue one-by-one until reaching Shelf R
+4.	Look for Riya
+
+Option C
+1.	Go to Shelf M
+2.	Compare your friend’s name “Riya” to M.
+3.	If the name comes after M, go to Shelf A
+4.	If it comes before, go to Shelf Z
+5.	Search outward from there.
+
+Option D
+1.	Start at Shelf A
+2.	Jump to Shelf M
+3.	Jump to Shelf Z
+4.	Move backwards shelf-by-shelf looking for Riya
+`,
+    choices: ["Option A", "Option B", "Option C", "Option D"],
+    answer: "Option A"
+  },
+
+  {
+    id: "q4",
+    text: "Dependencies — College Event Task Ordering",
+    description: `
+You are organizing a college cultural event, and you have 5 tasks to complete today:
+
+Task A — Collect the decoration materials
+You can't decorate unless materials are collected.
+Task B — Decorate the stage
+This can ONLY be done after Task A.
+Task C — Pick up the sound system from the store
+You must collect it first.
+Task D — Set up the speakers and microphones
+This can ONLY be done after Task C.
+Task E — Check and arrange chairs for the audience
+This task is independent.
+It can be done anytime, before or after anything.
+
+Which plan respects all real-life dependencies with no violations?
+
+Option A 
+1.	Collect decoration materials (Task A)
+2.	Decorate the stage (Task B)
+3.	Pick up the sound system (Task C)
+4.	Set up speakers and microphones (Task D)
+5.	Arrange audience chairs anytime (Task E)
+
+Option B 
+1.	Decorate the stage (Task B)
+2.	Collect decoration materials (Task A)
+3.	Pick sound system (Task C)
+4.	Set up speakers (Task D)
+5.	Arrange chairs (Task E)
+
+Option C
+1.	Pick up sound system (Task C)
+2.	Set up speakers (Task D)
+3.	Decorate stage (Task B)
+4.	Collect decoration materials (Task A)
+5.	Arrange chairs (Task E)
+
+Option D — WRONG (Alphabetical but unrealistic)
+1.  Collect materials
+2.	Decorate
+3.	Pick up sound system
+4.	Set up speakers
+5.	Arrange chairs only after everything else
+
+`,
+    choices: ["Option A", "Option B", "Option C", "Option D"],
+    answer: "Option A"
+  },
+
+  {
+    id: "q5",
+    text: "Traffic Light Time — Reaching Exam Center",
+    description: `
+A student has an exam at 10:00 AM.
+The route from home to the exam center has 4 traffic lights.
+•	If all lights are green, it takes exactly 1 hour to reach.
+•	Every red light adds 15 minutes of waiting time.
+•	Red lights behave independently (each light may turn red or green by chance).
+
+Today, the student hits 2 red lights and 2 green lights.
+What time should the student leave home to reach the exam center just on time?
+
+Option A: 8:40 AM
+Option B: 8:30 AM
+Option C: 8:45 AM
+Option D: 8:50 AM
+`,
+    choices: ["Option A", "Option B", "Option C", "Option D"],
+    answer: "Option B"
+  }
+];
+
+
+function render(){
+  const root = document.getElementById("quizRoot");
+  root.innerHTML = "";
+
+  QUESTIONS.forEach((q, idx) => {
+
+    const card = document.createElement("div");
+    card.className = "card";
+
+    card.innerHTML = `
+      <div>
+        <strong>${idx+1}. ${q.text}</strong>
+      </div>
+
+      <p class="small" style="white-space:pre-wrap">${q.description}</p>
+    `;
+
+    q.choices.forEach(ch => {
+      const lbl = document.createElement("label");
+      lbl.className = "small";
+      lbl.innerHTML = `
+        <input type="radio" name="${q.id}" value="${ch}" /> ${ch}
+      `;
+      card.appendChild(lbl);
+    });
+
+    root.appendChild(card);
+  });
+
+  const btn = document.createElement("button");
+  btn.className = "btn";
+  btn.innerText = "Submit";
+  btn.onclick = submit;
+
+  root.appendChild(btn);
+}
+
+async function submit(){
+  let score = 0;
+
+  QUESTIONS.forEach(q => {
+    const sel = document.querySelector(`input[name="${q.id}"]:checked`);
+if (sel && sel.value.trim() === q.answer.trim()) score++;
+  });
+
+  const res = await fetch(API + "/initialScore", {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({score})
+  });
+
+  const j = await res.json();
+
+  if(res.ok){
+    alert(`Assigned to group: ${j.group}\n${j.rules}`);
+    window.location = "day1_passage.html";
+  } else {
+    alert(j.error || "Error submitting quiz");
+  }
+}
+
+render();
+</script>
+
+</body>
+</html>
