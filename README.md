@@ -10,4 +10,4 @@ Important:
 - Run server: cd server && npm install && npm run dev
 - Open client: open client/index.html in browser (or serve via static server).
 - For local testing the backend runs on http://localhost:4000
-[View live preview ] https://devina05.github.io/NEURO-SURVEY/
+[View live preview](https://devina05.github.io/NEURO-SURVEY/) 
