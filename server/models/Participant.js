@@ -4,6 +4,7 @@ const ParticipantSchema = new mongoose.Schema({
   name: String,
   email: { type: String, unique: true },
   passwordHash: String,
+  role: { type: String, default: "user" },
 
   age: Number,
   cgpa: Number,

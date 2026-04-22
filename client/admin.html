@@ -16,9 +16,28 @@
 
 <script src="js/common.js"></script>
 <script>
+  const token = localStorage.getItem("token");
+
+if (!token) {
+  alert("Login as admin first");
+  window.location = "login.html";
+}
+
+fetch(API + "/me", { headers: authHeaders() })
+  .then(res => res.json())
+  .then(user => {
+    if (user.role !== "admin") {
+      alert("Access denied");
+      window.location = "index.html";
+    }
+  })
 async function init() {
   try {
-    const res = await fetch(API + '/admin/all');
+    const res = await fetch(API + '/admin/all', {
+  headers: {
+  "adminkey": "devina123"
+  }
+});
     if (!res.ok) throw new Error("API request failed");
 
     const data = await res.json();

@@ -20,6 +20,11 @@ app.use(cors());
 app.use(express.json());
 
 // 👉 FIX: SERVE CLIENT FOLDER CORRECTLY
+app.get("/", (req, res) => {
+  res.redirect("/login.html");
+});
+
+
 app.use(express.static(path.join(__dirname, "..", "client")));
 
 
@@ -71,6 +76,15 @@ async function ensureMeta() {
 
 // -------------- Auth Middleware -------------------
 
+function adminOnly(req, res, next) {
+  Participant.findById(req.userId).then(user => {
+    if (!user || user.role !== "admin") {
+      return res.status(403).json({ error: "Access denied" });
+    }
+    next();
+  });
+}
+
 function auth(req, res, next) {
   const token = req.headers.authorization?.split(" ")[1];
   if (!token) return res.status(401).json({ error: "Unauthorized" });
@@ -93,7 +107,7 @@ app.post("/api/signup", async (req, res) => {
       req.body;
 
     const exists = await Participant.findOne({ email });
-    if (exists) return res.json({ error: "Email already exists" });
+    if (exists) return res.status(400).json({ error: "Email already exists" });
 
     const hash = await bcrypt.hash(password, 10);
 
@@ -121,10 +135,10 @@ app.post("/api/login", async (req, res) => {
   const { email, password } = req.body;
 
   const user = await Participant.findOne({ email });
-  if (!user) return res.json({ error: "Invalid credentials" });
+  if (!user) return res.status(401).json({ error: "Invalid credentials" });
 
   const match = await bcrypt.compare(password, user.passwordHash);
-  if (!match) return res.json({ error: "Invalid credentials" });
+  if (!match) return res.status(401).json({ error: "Invalid credentials" });
 
   const token = jwt.sign({ id: user._id }, JWT_SECRET);
   res.json({ token, id: user._id });
@@ -156,7 +170,7 @@ app.post("/api/initialScore", auth, async (req, res) => {
   if (total === 0) group = Math.random() < 0.5 ? "ai" : "nonai";
   else if (total === 1) {
     let first = await Participant.findById(meta.orderedParticipants[0]);
-    if (first.category === p.category)
+    if (first && first.category === p.category)
       group = first.group === "ai" ? "nonai" : "ai";
     else group = Math.random() < 0.5 ? "ai" : "nonai";
   } else {
@@ -230,7 +244,7 @@ app.post("/api/day1/submit", auth, async (req, res) => {
   p.status = "day1_done";
   await p.save();
 
-  res.json({ ok: true });
+res.json({ next: "day2" });
 });
 
 // CHECK DAY2 AVAILABILITY
@@ -239,15 +253,15 @@ app.get("/api/day2/available", auth, async (req, res) => {
   if (!p.day1TakenAt)
     return res.json({ available: false, reason: "complete day1 first" });
 
-   // const diff = Date.now() - p.day1TakenAt.getTime();
-  // const min = 24 * 3600 * 1000;
-  // const max = 48 * 3600 * 1000;
+   const diff = Date.now() - p.day1TakenAt.getTime();
+  const min = 24 * 3600 * 1000;
+  const max = 48 * 3600 * 1000;
 
-  // if (diff < min)
-  //   return res.json({ available: false, reason: "too early", waitMs: min - diff });
+  if (diff < min)
+    return res.json({ available: false, reason: "too early", waitMs: min - diff });
 
-  // if (diff > max)
-  //   return res.json({ available: false, reason: "expired window" });
+  if (diff > max)
+    return res.json({ available: false, reason: "expired window" });
 
   return res.json({ available: true });
 });
@@ -267,7 +281,12 @@ app.post("/api/day2/submit", auth, async (req, res) => {
 
 // ADMIN ANALYSIS
 app.get("/api/admin/analysis", async (req, res) => {
-  const all = await Participant.find({ group: { $exists: true } }).sort({
+  const key = req.headers['adminkey'];
+
+  if (key !== "devina123") {
+    return res.status(403).json({ error: "Access denied" });
+  }
+    const all = await Participant.find({ group: { $exists: true } }).sort({
     assignedAt: 1
   });
 
@@ -297,6 +316,11 @@ app.get("/api/admin/analysis", async (req, res) => {
   res.json({ summary, generatedAt: new Date() });
 });
 app.get('/api/admin/all', async (req, res) => {
+  const key = req.headers['adminkey'];
+
+  if (key !== "devina123") {
+    return res.status(403).json({ error: "Access denied" });
+  }
   try {
     const participants = await Participant.find().select(
       "name email group category initialScore day1Score day2Score"
@@ -310,3 +334,5 @@ app.get('/api/admin/all', async (req, res) => {
 
 // START SERVER
 app.listen(PORT, () => console.log("Server running on port", PORT));
+
+

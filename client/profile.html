@@ -46,7 +46,7 @@ async function init() {
   const root = document.getElementById("root");
 
   // ------------ IF DAY-2 DONE → THANK YOU PAGE ------------
-  if (p.day2Score !== undefined && p.day2Score !== null) {
+  if (p.day2TakenAt)  {
     root.innerHTML = `
       <div class="thankyou-box">
         <strong>Thank you for participating!</strong>
@@ -71,9 +71,11 @@ async function init() {
   `;
 
   // ------------ Day-2 Button Logic ------------
-  if (p.day1Score && !p.day2Score) {
-    const check = await fetch(API + "/day2/available", { headers: authHeaders() });
-    const data = await check.json();
+  let data = null;
+
+if (p.day1TakenAt && !p.day2TakenAt) {
+  const check = await fetch(API + "/day2/available", { headers: authHeaders() });
+  data = await check.json();
 
     if (data.available) {
       html += `
@@ -83,15 +85,18 @@ async function init() {
       `;
     } else {
       html += `
-        <div style="margin-top: 15px;" class="small">
-          Day 2 will unlock after 24 hours.
-        </div>
-      `;
+  <div style="margin-top: 15px;" class="small">
+    Unlocks in: <span id="countdown"></span>
+  </div>
+`;
     }
   }
 
   html += `</div>`;
   root.innerHTML = html;
+  if (p.day1TakenAt && !p.day2TakenAt && data && !data.available && data.waitMs) {
+  startCountdown(data.waitMs);
+}
 
   // ------------ Show Group Popup ONLY BEFORE DAY-2 DONE ------------
   if (!p.day2Score && p.group) {
@@ -118,6 +123,29 @@ async function init() {
 
 function goToDay2() {
   window.location = "day2_quiz.html";
+}
+function startCountdown(ms) {
+  const el = document.getElementById("countdown");
+
+  function update() {
+    if (ms <= 0) {
+      el.innerText = "Unlocked!";
+      location.reload();
+      return;
+    }
+
+    const totalSeconds = Math.floor(ms / 1000);
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+
+    el.innerText = `${h}h ${m}m ${s}s`;
+
+    ms -= 1000;
+  }
+
+  update();
+  setInterval(update, 1000);
 }
 
 init();
