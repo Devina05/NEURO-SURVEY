@@ -5,4 +5,3 @@ Structure:
 - server/: Node.js + Express backend (MongoDB via Mongoose)
 - client/: Static frontend (HTML/CSS/JS)
 
-[View live preview](https://devina05.github.io/NEURO-SURVEY/) 
