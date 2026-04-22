@@ -8,9 +8,9 @@ function getToken(){
   return localStorage.getItem("token");
 }
 
-function authHeaders(){
-  const t = getToken();
-  return t 
-    ? { "Content-Type": "application/json", "Authorization": "Bearer " + t }
-    : { "Content-Type": "application/json" };
+function authHeaders() {
+  return {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer " + localStorage.getItem("token")
+  };
 }

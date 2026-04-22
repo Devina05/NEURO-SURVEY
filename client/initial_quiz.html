@@ -17,7 +17,7 @@
 
 <script>
 // Full detailed questions:
-
+///const API = require("./js/common.js").API;
 const QUESTIONS = [
   {
     id: "q1",
@@ -293,10 +293,14 @@ if (sel && sel.value.trim() === q.answer.trim()) score++;
   });
 
   const res = await fetch(API + "/initialScore", {
-    method: "POST",
-    headers: authHeaders(),
-    body: JSON.stringify({score})
-  });
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer " + localStorage.getItem("token")
+  },
+  body: JSON.stringify({ score })
+});
+
 
   const j = await res.json();
 
