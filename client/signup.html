@@ -11,6 +11,44 @@
   <div class="container">
     <h2>Sign Up</h2>
 
+    <!-- CONSENT MODAL -->
+<div id="consentModal" style="position:fixed; inset:0; background:rgba(0,0,0,0.5); 
+  display:flex; align-items:center; justify-content:center; z-index:999;">
+  <div class="card" style="max-width:500px; max-height:80vh; overflow-y:auto;">
+    <h3>Informed Consent</h3>
+    <p class="small" style="margin-top:8px; line-height:1.7;">
+      You are being invited to participate in a research study titled 
+      <strong>"Effect of AI Assistance on Short-Term Memory Retention"</strong> 
+      conducted as part of an undergraduate research project.
+      <br><br>
+      <strong>What will happen:</strong><br>
+      • You will complete a short cognitive screening quiz<br>
+      • You will read a passage and answer questions on Day 1<br>
+      • You will return 24–48 hours later to answer questions from memory<br>
+      • You will be randomly assigned to either an AI-assisted or non-AI group<br>
+      <br>
+      <strong>Your rights:</strong><br>
+      • Participation is completely voluntary<br>
+      • You may withdraw at any time before Day 2 submission<br>
+      • Your data will be stored anonymously using an ID code<br>
+      • No personally identifiable information will be shared<br>
+      <br>
+      <strong>Risks:</strong> This study involves no physical or psychological risk.
+      <br><br>
+      By clicking "I Agree" you confirm you are 18 or older and consent 
+      to participate in this study.
+    </p>
+    <div style="margin-top:16px; display:flex; gap:8px;">
+      <button class="btn" onclick="giveConsent()">I Agree</button>
+      <button onclick="window.location='index.html'" 
+        style="padding:8px 12px; border-radius:6px; border:1px solid #e6e9ef; 
+        background:white; cursor:pointer;">
+        Decline
+      </button>
+    </div>
+  </div>
+</div>
+
     <div class="card">
       <label>Name</label>
       <input id="name" class="input" required />
@@ -47,6 +85,17 @@
   <script src="js/common.js"></script>
 
   <script>
+    function giveConsent() {
+  sessionStorage.setItem('consented', 'true');
+  document.getElementById('consentModal').style.display = 'none';
+}
+
+// Block signup form if no consent
+window.onload = () => {
+  if (sessionStorage.getItem('consented') !== 'true') {
+    document.getElementById('consentModal').style.display = 'flex';
+  }
+};
     document.getElementById('signupBtn').onclick = async () => {
 
       const payload = {

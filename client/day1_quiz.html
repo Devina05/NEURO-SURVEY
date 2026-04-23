@@ -7,6 +7,7 @@
 </head>
 
 <body>
+  
 <div class="container">
   <h2>Day 1 — Quiz</h2>
   <div id="root"></div>
@@ -15,6 +16,11 @@
 <script src="js/common.js"></script>
 
 <script>
+  let tabSwitchCount = 0;
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) tabSwitchCount++;
+});
 // -------- Disable back --------
 history.pushState(null, null, location.href);
 window.onpopstate = () => history.go(1);
@@ -23,65 +29,82 @@ window.onpopstate = () => history.go(1);
 // Added “None of the above” to all questions
 const QUESTIONS = [
   {
-    id:"d1_q1",
-    text:"At what altitude are cloud forests typically found?",
-    choices:["500–1,000 meters","1,500–3,000 meters","3,500–5,000 meters","None of the above"],
-    answer:"1,500–3,000 meters"
+    id: "d1_q1",
+    text: "How deep below the surface was the Korath Basin?",
+    choices: ["200 metres", "400 metres", "600 metres", "800 metres"],
+    answer: "400 metres"
   },
   {
-    id:"d1_q2",
-    text:"What is the main source of moisture for cloud forests?",
-    choices:["Heavy rainfall","Groundwater absorption","Mist and cloud condensation","None of the above"],
-    answer:"Mist and cloud condensation"
+    id: "d1_q2",
+    text: "What was the diameter of each Lightwell shaft?",
+    choices: ["6 metres", "8 metres", "12 metres", "20 metres"],
+    answer: "12 metres"
   },
   {
-    id:"d1_q3",
-    text:"Which type of plants commonly grow on the surface of other plants in cloud forests?",
-    choices:["Epiphytes","Shrubs","Mangroves","None of the above"],
-    answer:"Epiphytes"
+    id: "d1_q3",
+    text: "What mineral was used to make the crystalline lens in each Lightwell?",
+    choices: ["Fenrite", "Solvite", "Korathite", "Velunite"],
+    answer: "Solvite"
   },
   {
-    id:"d1_q4",
-    text:"Why do cloud forests have lower evaporation rates?",
-    choices:["Deep valleys trap water","Dense canopy traps moisture","Low sunlight reaches the forest floor","None of the above"],
-    answer:"Dense canopy traps moisture"
+    id: "d1_q4",
+    text: "What was the area illuminated by a single Lightwell called?",
+    choices: ["Lumin Zone", "Light Basin", "Solvite Field", "Korath Circle"],
+    answer: "Lumin Zone"
   },
   {
-    id:"d1_q5",
-    text:"Cloud forests help surrounding regions primarily by:",
-    choices:["Storing carbon dioxide","Capturing moisture for water supply","Producing large leaves","None of the above"],
-    answer:"Capturing moisture for water supply"
+    id: "d1_q5",
+    text: "Which Miredan caste was responsible for managing light distribution?",
+    choices: ["Drillers", "Lensmakers", "Wardens", "Fenroot Farmers"],
+    answer: "Wardens"
   },
   {
-    id:"d1_q6",
-    text:"What happens as clouds pass through the canopy?",
-    choices:["Leaves repel moisture","Leaves capture water droplets","Clouds dissolve completely","None of the above"],
-    answer:"Leaves capture water droplets"
+    id: "d1_q6",
+    text: "How many hours of concentrated light per day did Fenroot require?",
+    choices: ["2 hours", "4 hours", "6 hours", "8 hours"],
+    answer: "4 hours"
   },
   {
-    id:"d1_q7",
-    text:"Why are cloud forests considered vulnerable to climate change?",
-    choices:["Cloud layers rise with higher temperatures","They receive too much rainfall","They are expanding rapidly","None of the above"],
-    answer:"Cloud layers rise with higher temperatures"
+    id: "d1_q7",
+    text: "What percentage of the Miredan diet did Fenroot provide?",
+    choices: ["60 percent", "70 percent", "80 percent", "90 percent"],
+    answer: "80 percent"
   },
   {
-    id:"d1_q8",
-    text:"Many cloud-forest species are at high risk because:",
-    choices:["They migrate seasonally","They exist only in specific humidity conditions","They grow quickly and unpredictably","None of the above"],
-    answer:"They exist only in specific humidity conditions"
+    id: "d1_q8",
+    text: "Where was Solvite mineral exclusively found?",
+    choices: [
+      "Southern caves of Korath Basin",
+      "Northern caves of Korath Basin",
+      "The Velun surface",
+      "Deep lightless tunnels"
+    ],
+    answer: "Northern caves of Korath Basin"
   },
   {
-    id:"d1_q9",
-    text:"Which human activity is contributing to cloud forest loss?",
-    choices:["Afforestation","Urban gardening","Deforestation for farming","None of the above"],
-    answer:"Deforestation for farming"
+  id: "d1_attention",
+  text: "ATTENTION CHECK: This is not a memory question. Please select '3 square kilometres' as your answer.",
+  choices: [
+    "1 square kilometre",
+    "2 square kilometres", 
+    "3 square kilometres",
+    "5 square kilometres"
+  ],
+  answer: "3 square kilometres"
+},
+  {
+    id: "d1_q9",
+    text: "In what year of the Miredan calendar did Solvite deposits become exhausted?",
+    choices: ["Year 800", "Year 1,000", "Year 1,200", "Year 1,400"],
+    answer: "Year 1,400"
   },
   {
-    id:"d1_q10",
-    text:"Which conservation action is mentioned in the passage?",
-    choices:["Increasing agriculture in mountains","Restoring nearby habitats","Encouraging cloud-forest tourism","None of the above"],
-    answer:"Restoring nearby habitats"
+    id: "d1_q10",
+    text: "What percentage of Lumin Zones had gone dark within three generations?",
+    choices: ["40 percent", "50 percent", "60 percent", "80 percent"],
+    answer: "60 percent"
   }
+  
 ];
 
 function render() {
@@ -114,17 +137,31 @@ function render() {
 }
 
 async function submitQuiz() {
-  let score = 0;
+  // ── Attention check first ──
+  const attentionSel = document.querySelector(
+    `input[name="d1_attention"]:checked`
+  );
+  if (!attentionSel || attentionSel.value !== "3 square kilometres") {
+    alert(
+      "You did not pass the attention check. " +
+      "Please read all questions carefully and try again."
+    );
+    return;
+  }
 
+  // ── Calculate score (skip attention question) ──
+  let score = 0;
   QUESTIONS.forEach(q => {
+    if (q.id === "d1_attention") return;
     const sel = document.querySelector(`input[name="${q.id}"]:checked`);
     if (sel && sel.value.trim() === q.answer.trim()) score++;
   });
 
+  // ── Submit ──
   const res = await fetch(API + "/day1/submit", {
     method: "POST",
     headers: authHeaders(),
-    body: JSON.stringify({score})
+    body: JSON.stringify({ score, tabSwitches: tabSwitchCount })
   });
 
   if (res.ok) {

@@ -13,6 +13,7 @@ const path = require("path");
 const Participant = require("./models/Participant");
 const Meta = require("./models/Meta");
 const Analysis = require("./models/Analysis");
+const ss = require("simple-statistics");
 
 const app = express();
 
@@ -173,21 +174,30 @@ app.post("/api/initialScore", auth, async (req, res) => {
     if (first && first.category === p.category)
       group = first.group === "ai" ? "nonai" : "ai";
     else group = Math.random() < 0.5 ? "ai" : "nonai";
+  } 
+  else {
+  let aiC = meta.categories.ai[p.category];
+  let nonC = meta.categories.nonai[p.category];
+
+  // ✅ STEP 1: CATEGORY FIRST
+  if (aiC < nonC) {
+    group = "ai";
+  } else if (nonC < aiC) {
+    group = "nonai";
   } else {
-    let ca = meta.counts.ai;
-    let cn = meta.counts.nonai;
 
-    if (ca < cn) group = "ai";
-    else if (cn < ca) group = "nonai";
-    else {
-      let aiC = meta.categories.ai[p.category];
-      let nonC = meta.categories.nonai[p.category];
+    // ✅ STEP 2: TOTAL SECOND
+    if (meta.counts.ai < meta.counts.nonai) {
+      group = "ai";
+    } else if (meta.counts.nonai < meta.counts.ai) {
+      group = "nonai";
+    } else {
 
-      if (aiC < nonC) group = "ai";
-      else if (nonC < aiC) group = "nonai";
-      else group = Math.random() < 0.5 ? "ai" : "nonai";
+      // ✅ STEP 3: RANDOM
+      group = Math.random() < 0.5 ? "ai" : "nonai";
     }
   }
+}
 
   // UPDATE META + PARTICIPANT
   p.group = group;
@@ -217,13 +227,12 @@ app.get("/api/me", auth, async (req, res) => {
 
 // DAY1 PASSAGE
 const passage = `
-PASSAGE – “The Cloud Forest Ecosystem”
-Cloud forests are rare tropical forests found in high-altitude regions, usually between 1,500 and 3,000 meters above sea level. These forests remain enveloped in a constant layer of mist and low-lying clouds, which provide moisture directly to the leaves of plants. Unlike rainforests, which rely primarily on heavy rainfall, cloud forests depend on the subtle process of water condensing from the atmosphere.
-Because of the cool, humid climate, cloud forests support an extraordinary range of plant life, including orchids, mosses, lichens, and tree ferns. Many of these plants are epiphytes—species that grow on the surface of other plants without taking nutrients from them. This unique vegetation structure helps create a dense, multi-layered canopy that traps water droplets and reduces evaporation.
-Cloud forests play an essential role in regulating the water supply for nearby towns and agricultural regions. As clouds pass through the canopy, leaves capture moisture, which then drips down to the forest floor, replenishing streams and underground springs. This natural “water harvesting” system supports millions of people worldwide.
-Sadly, cloud forests are among the most threatened ecosystems on Earth. Rising global temperatures are pushing cloud layers to higher altitudes, reducing the amount of moisture available to these forests. Deforestation for farming and development further shrinks their fragile habitat. Because many species found in cloud forests exist nowhere else, even small changes in temperature or humidity can lead to irreversible biodiversity loss.
-Scientists warn that if protective measures are not taken soon, large sections of cloud forests may disappear within the next century, disrupting water cycles and eliminating countless plant and animal species. However, conservation projects—such as restoring nearby habitats, limiting land clearing, and protecting high-elevation zones—offer hope for preserving these irreplaceable ecosystems.
-
+PASSAGE – The Miredan Civilization and the Lightwell System
+The Miredan people inhabited the subterranean valleys of the Korath Basin, a vast underground region located approximately 400 metres below the surface of the Velun continent. Unlike surface civilizations that relied on sunlight, the Miредans developed an ingenious system of energy harvesting known as the Lightwell Network.
+Each Lightwell was a vertical shaft, precisely 12 metres in diameter, drilled through the rock ceiling above a Miredan settlement. At the top of each shaft, engineers installed a crystalline lens made from compressed Solvite mineral. This lens captured and concentrated even the faintest traces of surface light, bending it downward into the underground settlements below. A single Lightwell could illuminate an area of roughly 3 square kilometres, which the Miредans called a Lumin Zone.
+The Miredan society was divided into three occupational castes based on their relationship with the Lightwells. The Drillers were responsible for constructing new shafts and maintaining existing ones. The Lensmakers specialized in harvesting and processing Solvite, which was only found in the northern caves of the Korath Basin. The Wardens managed the distribution of light across Lumin Zones, ensuring that agricultural areas received priority during growing seasons.
+Agriculture in the Korath Basin relied entirely on a crop called Fenroot, a pale tuberous plant that required only four hours of concentrated light per day to grow. Fenroot provided 80 percent of the Miredan diet, while the remaining 20 percent came from cave fungi harvested from the deeper, lightless tunnels. Every Miredan settlement maintained a strict light schedule — agricultural fields received light from dawn to midday, and residential areas received it from midday to dusk.
+The decline of the Miredan civilization began when Solvite deposits in the northern caves became exhausted around the year 1,400 of the Miredan calendar. Without new lenses, existing Lightwells began to deteriorate. Within three generations, 60 percent of all Lumin Zones had gone dark. Fenroot harvests collapsed, and the population declined sharply. The remaining Miредans attempted to migrate to the surface but were unprepared for open sunlight, having lived underground for over 800 years. Historians consider the Miredan collapse one of the most complete civilizational failures in recorded history, caused entirely by dependence on a single non-renewable resource.
 `;
 
 app.get("/api/day1/passage", auth, async (req, res) => {
@@ -254,7 +263,7 @@ app.get("/api/day2/available", auth, async (req, res) => {
     return res.json({ available: false, reason: "complete day1 first" });
 
    const diff = Date.now() - p.day1TakenAt.getTime();
-  const min = 24 * 3600 * 1000;
+  const min = 60 * 1000;
   const max = 48 * 3600 * 1000;
 
   if (diff < min)
@@ -331,7 +340,155 @@ app.get('/api/admin/all', async (req, res) => {
   }
 });
 
+// ── Helper: two-sample t-test ──
+function tTest(a, b) {
+  if (a.length < 2 || b.length < 2) 
+    return { t: null, p: null, meanA: null, meanB: null };
+  
+  const meanA = ss.mean(a);
+  const meanB = ss.mean(b);
+  const varA = ss.sampleVariance(a);
+  const varB = ss.sampleVariance(b);
+  const se = Math.sqrt(varA / a.length + varB / b.length);
+  
+  if (se === 0) 
+    return { t: 0, p: 1, meanA: +meanA.toFixed(2), meanB: +meanB.toFixed(2) };
+  
+  const t = (meanA - meanB) / se;
+  const p = 2 * (1 - ss.cumulativeStdNormalProbability(Math.abs(t)));
+  
+  return { 
+    t: +t.toFixed(3), 
+    p: +p.toFixed(4), 
+    meanA: +meanA.toFixed(2), 
+    meanB: +meanB.toFixed(2) 
+  };
+}
 
+// ── Full Hypothesis Analysis Endpoint ──
+app.get('/api/admin/analysis/full', async (req, res) => {
+  const key = req.headers['adminkey'];
+  if (key !== "devina123") 
+    return res.status(403).json({ error: "Access denied" });
+
+  // Fetch only participants who completed both days
+  const all = await Participant.find({
+    group: { $exists: true },
+    day1Score: { $exists: true },
+    day2Score: { $exists: true }
+  });
+
+  const ai = all.filter(x => x.group === "ai");
+  const nonai = all.filter(x => x.group === "nonai");
+
+  // H1: Compare retention DROP between groups
+  // drop = day1 - day2 (positive = forgot more)
+  const aiDrop = ai.map(x => x.day1Score - x.day2Score);
+  const nonaiDrop = nonai.map(x => x.day1Score - x.day2Score);
+  const h1 = tTest(aiDrop, nonaiDrop);
+
+  // H2: Compare Day 1 scores — did AI group score higher?
+  const h2 = tTest(
+    ai.map(x => x.day1Score), 
+    nonai.map(x => x.day1Score)
+  );
+
+  // H3: Compare Day 2 scores — did Non-AI group score higher?
+  const h3 = tTest(
+    nonai.map(x => x.day2Score), 
+    ai.map(x => x.day2Score)
+  );
+
+  // H5: Correlation — does lower initialScore = bigger drop? (AI group only)
+  const h5pairs = ai
+    .filter(x => x.initialScore != null)
+    .map(x => [x.initialScore, x.day1Score - x.day2Score]);
+
+  let h5corr = null;
+  if (h5pairs.length >= 3) {
+    h5corr = +ss.sampleCorrelation(
+      h5pairs.map(x => x[0]), 
+      h5pairs.map(x => x[1])
+    ).toFixed(3);
+  }
+
+  // H5 extra: average drop broken down by category (low/med/high)
+  const dropByCategory = {};
+  ["low", "med", "high"].forEach(cat => {
+    const catGroup = all.filter(x => x.category === cat);
+    const drops = catGroup.map(x => x.day1Score - x.day2Score);
+    dropByCategory[cat] = {
+      n: drops.length,
+      avgDrop: drops.length ? +ss.mean(drops).toFixed(2) : null
+    };
+  });
+
+  res.json({
+    sampleSize: { ai: ai.length, nonai: nonai.length, total: all.length },
+    H1: {
+      ...h1,
+      label: "AI group shows greater retention drop",
+      interpretation: h1.p !== null 
+        ? (h1.p < 0.05 ? "✅ Supported" : "❌ Not supported") 
+        : "Insufficient data",
+      note: "meanA = AI drop, meanB = NonAI drop"
+    },
+    H2: {
+      ...h2,
+      label: "AI group scores higher on Day 1",
+      interpretation: h2.p !== null 
+        ? (h2.p < 0.05 && h2.meanA > h2.meanB ? "✅ Supported" : "❌ Not supported") 
+        : "Insufficient data",
+      note: "meanA = AI Day1, meanB = NonAI Day1"
+    },
+    H3: {
+      ...h3,
+      label: "Non-AI group outperforms on Day 2",
+      interpretation: h3.p !== null 
+        ? (h3.p < 0.05 && h3.meanA > h3.meanB ? "✅ Supported" : "❌ Not supported") 
+        : "Insufficient data",
+      note: "meanA = NonAI Day2, meanB = AI Day2"
+    },
+    H5: {
+      correlation: h5corr,
+      label: "Lower baseline = more retention loss (AI group)",
+      interpretation: h5corr !== null 
+        ? (h5corr < -0.3 ? "✅ Supported" : "❌ Not supported") 
+        : "Insufficient data",
+      note: "Negative value = lower initial score → bigger drop"
+    },
+    H5_byCategory: dropByCategory,
+    generatedAt: new Date()
+  });
+});
+
+app.get('/api/admin/dropout', async (req, res) => {
+  const key = req.headers['adminkey'];
+  if (key !== "devina123") 
+    return res.status(403).json({ error: "Access denied" });
+
+  const all = await Participant.find();
+
+  const summary = {
+    total: all.length,
+    signedUp: all.filter(p => p.status === 'signed_up').length,
+    initialDone: all.filter(p => p.status === 'initial_done').length,
+    assigned: all.filter(p => p.status === 'assigned').length,
+    day1Done: all.filter(p => p.status === 'day1_done').length,
+    day2Done: all.filter(p => p.status === 'day2_done').length,
+  };
+
+  // dropout at each stage
+  summary.dropAfterSignup = summary.signedUp;
+  summary.dropAfterInitial = summary.initialDone;
+  summary.dropAfterAssign = summary.assigned;
+  summary.dropAfterDay1 = summary.day1Done - summary.day2Done;
+  summary.completionRate = summary.total > 0
+    ? ((summary.day2Done / summary.total) * 100).toFixed(1)
+    : 0;
+
+  res.json(summary);
+});
 // START SERVER
 app.listen(PORT, () => console.log("Server running on port", PORT));
 

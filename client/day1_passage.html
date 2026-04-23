@@ -78,20 +78,35 @@ function startTimer(durationMs) {
 
 // ---------- Start button ----------
 document.getElementById("startBtn").onclick = async () => {
+  // Check group first
+  const meRes = await fetch(API + "/me", { headers: authHeaders() });
+  const me = await meRes.json();
+
+  if (me.group === "nonai") {
+    const agreed = confirm(
+      "HONESTY DECLARATION\n\n" +
+      "You are in the Non-AI group.\n\n" +
+      "I confirm that I will NOT use any AI tools, search engines, " +
+      "or external resources to answer the Day 1 questions.\n\n" +
+      "Click OK to agree and continue, or Cancel to exit."
+    );
+    if (!agreed) {
+      alert("You must agree to the honesty declaration to proceed.");
+      return;
+    }
+  }
+
   const startBtn = document.getElementById("startBtn");
   const passageBox = document.getElementById("passageBox");
 
-  startBtn.style.display = "none";    // hide start button
-  passageBox.style.display = "block"; // show passage section
+  startBtn.style.display = "none";
+  passageBox.style.display = "block";
 
-  // Fetch passage & start timer
   const res = await fetch(API + "/day1/passage", { headers: authHeaders() });
   const j = await res.json();
   document.getElementById("passageText").innerText = j.passage;
 
-  startTimer(5 * 60 * 1000); // 5 minutes = 300,000 ms
-
-  // Show "Go to questions" button (always available after passage shown)
+  startTimer(5 * 60 * 1000);
   document.getElementById("toQuizBtn").style.display = "block";
 };
 
