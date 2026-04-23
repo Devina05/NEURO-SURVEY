@@ -1,5 +1,4 @@
 const API = window.location.origin + "/api";
-
 function setToken(t){
   localStorage.setItem("token", t);
 }
