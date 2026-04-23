@@ -1,4 +1,4 @@
-const API = "http://localhost:4000/api";
+const API = window.location.origin + "/api";
 
 function setToken(t){
   localStorage.setItem("token", t);
