@@ -26,6 +26,10 @@ const ParticipantSchema = new mongoose.Schema({
   day2TakenAt: Date,
 
   status: String, // signed_up, initial_done, assigned, day1_done, day2_done
+  tabSwitches: Number,
+aiRelianceRating: Number,
+aiHelpfulnessRating: Number,
+aiUsageDescription: String,
 
   createdAt: { type: Date, default: Date.now }
 });

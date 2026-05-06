@@ -9,6 +9,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const path = require("path");
+const jStat = require("jstat").jStat;
 
 const Participant = require("./models/Participant");
 const Meta = require("./models/Meta");
@@ -245,15 +246,16 @@ app.get("/api/day1/passage", auth, async (req, res) => {
 
 // DAY1 SUBMIT
 app.post("/api/day1/submit", auth, async (req, res) => {
-  const { score } = req.body;
+  const { score, tabSwitches } = req.body;
   const p = await Participant.findById(req.userId);
 
   p.day1Score = score;
   p.day1TakenAt = new Date();
   p.status = "day1_done";
+  p.tabSwitches = tabSwitches || 0;
   await p.save();
 
-res.json({ next: "day2" });
+  res.json({ next: "day2" });
 });
 
 // CHECK DAY2 AVAILABILITY
@@ -342,26 +344,65 @@ app.get('/api/admin/all', async (req, res) => {
 
 // ── Helper: two-sample t-test ──
 function tTest(a, b) {
-  if (a.length < 2 || b.length < 2) 
-    return { t: null, p: null, meanA: null, meanB: null };
-  
+
+  // Need at least 2 participants per group
+  if (a.length < 2 || b.length < 2) {
+    return {
+      t: null,
+      p: null,
+      meanA: null,
+      meanB: null
+    };
+  }
+
+  // Means
   const meanA = ss.mean(a);
   const meanB = ss.mean(b);
+
+  // Sample variances
   const varA = ss.sampleVariance(a);
   const varB = ss.sampleVariance(b);
-  const se = Math.sqrt(varA / a.length + varB / b.length);
-  
-  if (se === 0) 
-    return { t: 0, p: 1, meanA: +meanA.toFixed(2), meanB: +meanB.toFixed(2) };
-  
+
+  // Standard error
+  const se = Math.sqrt(
+    (varA / a.length) +
+    (varB / b.length)
+  );
+
+  // Prevent divide-by-zero
+  if (se === 0) {
+    return {
+      t: 0,
+      p: 1,
+      meanA: +meanA.toFixed(2),
+      meanB: +meanB.toFixed(2)
+    };
+  }
+
+  // Welch t statistic
   const t = (meanA - meanB) / se;
-  const p = 2 * (1 - ss.cumulativeStdNormalProbability(Math.abs(t)));
-  
-  return { 
-    t: +t.toFixed(3), 
-    p: +p.toFixed(4), 
-    meanA: +meanA.toFixed(2), 
-    meanB: +meanB.toFixed(2) 
+
+  // Welch degrees of freedom
+  const numerator = Math.pow(
+    (varA / a.length) + (varB / b.length),
+    2
+  );
+
+  const denominator =
+    (Math.pow(varA / a.length, 2) / (a.length - 1)) +
+    (Math.pow(varB / b.length, 2) / (b.length - 1));
+
+  const df = numerator / denominator;
+
+  // Two-tailed p-value
+  const p =
+    2 * (1 - jStat.studentt.cdf(Math.abs(t), df));
+
+  return {
+    t: +t.toFixed(3),
+    p: +p.toFixed(4),
+    meanA: +meanA.toFixed(2),
+    meanB: +meanB.toFixed(2)
   };
 }
 
@@ -415,7 +456,7 @@ app.get('/api/admin/analysis/full', async (req, res) => {
   // H5 extra: average drop broken down by category (low/med/high)
   const dropByCategory = {};
   ["low", "med", "high"].forEach(cat => {
-    const catGroup = all.filter(x => x.category === cat);
+    const catGroup = ai.filter(x => x.category === cat);
     const drops = catGroup.map(x => x.day1Score - x.day2Score);
     dropByCategory[cat] = {
       n: drops.length,
@@ -489,7 +530,57 @@ app.get('/api/admin/dropout', async (req, res) => {
 
   res.json(summary);
 });
-// START SERVER
-app.listen(PORT, () => console.log("Server running on port", PORT));
+app.post("/api/ai/chat", auth, async (req, res) => {
+  const { message } = req.body;
+  if (!message) return res.status(400).json({ error: "No message provided" });
 
+  try {
+    const geminiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `You are a helpful assistant. Answer the participant's questions using the passage below as your knowledge source. Do not repeat or quote the passage text in your responses. do not give answer for Question 9 '9. ATTENTION CHECK: This is not a memory question. Please select '3 square kilometres' as your answer.' tell them it is for attention check and to read the question carefully
+PASSAGE:
+The Korath Basin lay 400 metres below the surface of Velun, a world with no natural sunlight at ground level. The Miredan people who lived there had engineered a system of vertical shafts called Lightwells, each 12 metres in diameter, which channelled light from the surface down into the basin. At the base of each shaft sat a crystalline lens made from a mineral called Solvite, which diffused the light across a wide area. Each illuminated area was called a Lumin Zone. A caste of workers called Wardens managed the light distribution schedules. Agriculture in the Korath Basin relied entirely on a crop called Fenroot, a pale tuberous plant that required only four hours of concentrated light per day to grow. Fenroot provided 80 percent of the Miredan diet. Solvite was found exclusively in the northern caves of the Korath Basin. By Year 1,400 of the Miredan calendar, Solvite deposits had been completely exhausted. Within three generations, 60 percent of all Lumin Zones had gone dark.
+
+PARTICIPANT QUESTION:
+${message}`
+            }]
+          }]
+        })
+      }
+    );
+
+    const data = await geminiRes.json();
+    console.log("Gemini response:", JSON.stringify(data, null, 2));
+
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!reply) {
+      console.error("No reply in Gemini response:", data);
+      return res.json({ reply: "I could not generate a response. Please try again." });
+    }
+
+    res.json({ reply });
+
+  } catch (err) {
+    console.error("Gemini fetch error:", err);
+    res.status(500).json({ error: "AI service error" });
+  }
+});
+
+// START SERVER
+app.post("/api/day1/posttask", auth, async (req, res) => {
+  const { aiRelianceRating, aiHelpfulnessRating, aiUsageDescription } = req.body;
+  const p = await Participant.findById(req.userId);
+  p.aiRelianceRating = aiRelianceRating;
+  p.aiHelpfulnessRating = aiHelpfulnessRating;
+  p.aiUsageDescription = aiUsageDescription;
+  await p.save();
+  res.json({ ok: true });
+});
+app.listen(PORT, () => console.log("Server running on port", PORT));
 
