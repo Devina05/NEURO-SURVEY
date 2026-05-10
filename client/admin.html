@@ -283,14 +283,14 @@ async function loadAnalysis() {
       result: d.H3.interpretation
     },
     {
-      id: 'H5',
+      id: 'H4',
       label: 'Lower baseline = more retention loss',
       note: 'Correlation in AI group only',
-      meanA: d.H5.correlation ?? '—',
+      meanA: d.H4.correlation ?? '—',
       meanB: '—',
       t: '—',
       p: '—',
-      result: d.H5.interpretation
+      result: d.H4.interpretation
     }
   ];
 
@@ -334,10 +334,10 @@ async function loadAnalysis() {
 
   html += `</tbody></table></div>`;
 
-  // H5 category breakdown
+  // H4 category breakdown
   html += `
     <div class="card">
-      <strong>H5 — Retention drop by baseline category</strong>
+      <strong>H4 — Retention drop by baseline category</strong>
       <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:12px;">
         ${['low','med','high'].map(cat => `
           <div style="background:#f8fafc; padding:12px; border-radius:8px; text-align:center;">
@@ -345,9 +345,9 @@ async function loadAnalysis() {
               ${cat}
             </div>
             <div style="font-size:20px; font-weight:500;">
-              ${d.H5_byCategory[cat]?.avgDrop ?? '—'}
+              ${d.H4_byCategory[cat]?.avgDrop ?? '—'}
             </div>
-            <div class="small">n = ${d.H5_byCategory[cat]?.n ?? 0}</div>
+            <div class="small">n = ${d.H4_byCategory[cat]?.n ?? 0}</div>
           </div>
         `).join('')}
       </div>

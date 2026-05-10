@@ -441,19 +441,19 @@ app.get('/api/admin/analysis/full', async (req, res) => {
   );
 
   // H5: Correlation — does lower initialScore = bigger drop? (AI group only)
-  const h5pairs = ai
+  const h4pairs = ai
     .filter(x => x.initialScore != null)
     .map(x => [x.initialScore, x.day1Score - x.day2Score]);
 
-  let h5corr = null;
+  let h4corr = null;
   if (h5pairs.length >= 3) {
-    h5corr = +ss.sampleCorrelation(
+    h4corr = +ss.sampleCorrelation(
       h5pairs.map(x => x[0]), 
       h5pairs.map(x => x[1])
     ).toFixed(3);
   }
 
-  // H5 extra: average drop broken down by category (low/med/high)
+  // H4 extra: average drop broken down by category (low/med/high)
   const dropByCategory = {};
   ["low", "med", "high"].forEach(cat => {
     const catGroup = ai.filter(x => x.category === cat);
@@ -490,7 +490,7 @@ app.get('/api/admin/analysis/full', async (req, res) => {
         : "Insufficient data",
       note: "meanA = NonAI Day2, meanB = AI Day2"
     },
-    H5: {
+    H4: {
       correlation: h5corr,
       label: "Lower baseline = more retention loss (AI group)",
       interpretation: h5corr !== null 

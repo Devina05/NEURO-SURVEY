@@ -31,93 +31,69 @@ async function init() {
 const QUESTIONS = [
   {
     id: "d2_q1",
-    text: "The Korath Basin was located on which continent?",
-    choices: ["Solvite", "Miredan", "Velun", "Korath"],
-    answer: "Velun"
+    text: "The Korath Basin was located how far below the surface?",
+    choices: ["200 metres", "400 metres", "600 metres", "800 metres"],
+    answer: "400 metres"
   },
   {
     id: "d2_q2",
-    text: "What was the primary purpose of the crystalline lens at the top of each Lightwell?",
-    choices: [
-      "To filter harmful radiation",
-      "To concentrate and bend light downward",
-      "To store light energy for night use",
-      "To measure surface temperature"
-    ],
-    answer: "To concentrate and bend light downward"
+    text: "The shafts used to bring light into the basin were called what?",
+    choices: ["Lumin Shafts", "Lightwells", "Solvite Tubes", "Korath Channels"],
+    answer: "Lightwells"
   },
   {
     id: "d2_q3",
-    text: "Which caste was responsible for harvesting and processing Solvite?",
-    choices: ["Wardens", "Drillers", "Lensmakers", "Fenroot Farmers"],
-    answer: "Lensmakers"
+    text: "Each shaft was how wide in diameter?",
+    choices: ["6 metres", "8 metres", "12 metres", "20 metres"],
+    answer: "12 metres"
   },
   {
     id: "d2_q4",
-    text: "What did the remaining 20 percent of the Miredan diet consist of?",
-    choices: [
-      "Surface crops brought underground",
-      "Cave fungi from deep tunnels",
-      "Processed Solvite mineral",
-      "Fenroot stored from previous harvests"
-    ],
-    answer: "Cave fungi from deep tunnels"
+    text: "The lens inside each shaft was made from which mineral?",
+    choices: ["Fenrite", "Korathite", "Solvite", "Velunite"],
+    answer: "Solvite"
   },
   {
     id: "d2_q5",
-    text: "During what part of the day did residential areas receive light?",
-    choices: [
-      "Dawn to midday",
-      "Midday to dusk",
-      "Dusk to dawn",
-      "All day equally"
-    ],
-    answer: "Midday to dusk"
+    text: "Each area lit up by a shaft was known as what?",
+    choices: ["Korath Circle", "Solvite Field", "Lumin Zone", "Light Basin"],
+    answer: "Lumin Zone"
   },
   {
     id: "d2_q6",
-    text: "How long had the Miредans lived underground before attempting to migrate to the surface?",
-    choices: ["400 years", "600 years", "800 years", "1,400 years"],
-    answer: "800 years"
+    text: "Which group of workers was in charge of managing light distribution?",
+    choices: ["Drillers", "Fenroot Farmers", "Lensmakers", "Wardens"],
+    answer: "Wardens"
   },
   {
     id: "d2_q7",
-    text: "What was the single cause of the Miredan civilizational collapse according to historians?",
-    choices: [
-      "War between the three castes",
-      "Flooding of the Korath Basin",
-      "Dependence on a single non-renewable resource",
-      "Overpopulation of Lumin Zones"
-    ],
-    answer: "Dependence on a single non-renewable resource"
+    text: "The main crop grown underground needed how many hours of light daily?",
+    choices: ["2 hours", "4 hours", "6 hours", "8 hours"],
+    answer: "4 hours"
   },
   {
     id: "d2_q8",
-    text: "Which caste built and maintained the Lightwell shafts?",
-    choices: ["Wardens", "Lensmakers", "Drillers", "Lumin Guards"],
-    answer: "Drillers"
+    text: "What fraction of the Miredan diet did Fenroot make up?",
+    choices: ["60 percent", "70 percent", "80 percent", "90 percent"],
+    answer: "80 percent"
   },
   {
     id: "d2_q9",
-    text: "How large an area could a single Lightwell illuminate?",
-    choices: [
-      "1 square kilometre",
-      "2 square kilometres",
-      "3 square kilometres",
-      "5 square kilometres"
-    ],
-    answer: "3 square kilometres"
+    text: "Solvite deposits ran out in which year of the Miredan calendar?",
+    choices: ["Year 800", "Year 1,000", "Year 1,200", "Year 1,400"],
+    answer: "Year 1,400"
   },
   {
     id: "d2_q10",
-    text: "Why were the Miредans unable to successfully migrate to the surface?",
-    choices: [
-      "The surface was too cold",
-      "They had no knowledge of surface geography",
-      "They were unprepared for open sunlight",
-      "Surface populations refused to accept them"
-    ],
-    answer: "They were unprepared for open sunlight"
+    text: "After Solvite was exhausted, what percentage of Lumin Zones eventually went dark?",
+    choices: ["40 percent", "50 percent", "60 percent", "80 percent"],
+    answer: "60 percent"
+  },
+  {
+    id: "d2_attention",
+    text: "ATTENTION CHECK: This is not a memory question. Please select 'Blue' as your answer.",
+    choices: ["Red", "Blue", "Green", "Yellow"],
+    answer: "Blue"
   }
 ];
 
@@ -152,16 +128,18 @@ function renderQuiz() {
 }
 
 async function submitQuiz() {
+  const attentionSel = document.querySelector(`input[name="d2_attention"]:checked`);
+  if (!attentionSel || attentionSel.value !== "Blue") {
+    alert("You did not pass the attention check. Please read all questions carefully.");
+    return;
+  }
+
   let score = 0;
-
   QUESTIONS.forEach(q => {
+    if (q.id === "d2_attention") return;
     const sel = document.querySelector(`input[name="${q.id}"]:checked`);
-    if (sel && sel.value.trim() === q.answer.trim()) {
-      score++;
-    }
+    if (sel && sel.value.trim() === q.answer.trim()) score++;
   });
-
-  alert("Day 2 Score: " + score);
 
   const res = await fetch(API + "/day2/submit", {
     method: "POST",
@@ -170,6 +148,7 @@ async function submitQuiz() {
   });
 
   if (res.ok) {
+    alert("Day 2 submitted. Score: " + score);
     window.location = "profile.html";
   } else {
     const j = await res.json();
