@@ -265,7 +265,7 @@ app.get("/api/day2/available", auth, async (req, res) => {
     return res.json({ available: false, reason: "complete day1 first" });
 
    const diff = Date.now() - p.day1TakenAt.getTime();
-  const min = 60 * 1000;
+  const min = 24 * 60 * 60 * 1000;
   const max = 48 * 3600 * 1000;
 
   if (diff < min)
@@ -294,7 +294,7 @@ app.post("/api/day2/submit", auth, async (req, res) => {
 app.get("/api/admin/analysis", async (req, res) => {
   const key = req.headers['adminkey'];
 
-  if (key !== "devina123") {
+  if (key !== "REMOTE@123") {
     return res.status(403).json({ error: "Access denied" });
   }
     const all = await Participant.find({ group: { $exists: true } }).sort({
@@ -329,7 +329,7 @@ app.get("/api/admin/analysis", async (req, res) => {
 app.get('/api/admin/all', async (req, res) => {
   const key = req.headers['adminkey'];
 
-  if (key !== "devina123") {
+  if (key !== "REMOTE@123") {
     return res.status(403).json({ error: "Access denied" });
   }
   try {
@@ -409,7 +409,7 @@ function tTest(a, b) {
 // ── Full Hypothesis Analysis Endpoint ──
 app.get('/api/admin/analysis/full', async (req, res) => {
   const key = req.headers['adminkey'];
-  if (key !== "devina123") 
+  if (key !== "REMOTE@123") 
     return res.status(403).json({ error: "Access denied" });
 
   // Fetch only participants who completed both days
@@ -446,10 +446,10 @@ app.get('/api/admin/analysis/full', async (req, res) => {
     .map(x => [x.initialScore, x.day1Score - x.day2Score]);
 
   let h4corr = null;
-  if (h5pairs.length >= 3) {
+  if (h4pairs.length >= 3) {
     h4corr = +ss.sampleCorrelation(
-      h5pairs.map(x => x[0]), 
-      h5pairs.map(x => x[1])
+      h4pairs.map(x => x[0]), 
+      h4pairs.map(x => x[1])
     ).toFixed(3);
   }
 
@@ -491,21 +491,21 @@ app.get('/api/admin/analysis/full', async (req, res) => {
       note: "meanA = NonAI Day2, meanB = AI Day2"
     },
     H4: {
-      correlation: h5corr,
+      correlation: h4corr,
       label: "Lower baseline = more retention loss (AI group)",
-      interpretation: h5corr !== null 
-        ? (h5corr < -0.3 ? "✅ Supported" : "❌ Not supported") 
+      interpretation: h4corr !== null 
+        ? (h4corr < -0.3 ? "✅ Supported" : "❌ Not supported") 
         : "Insufficient data",
       note: "Negative value = lower initial score → bigger drop"
     },
-    H5_byCategory: dropByCategory,
+    H4_byCategory: dropByCategory,
     generatedAt: new Date()
   });
 });
 
 app.get('/api/admin/dropout', async (req, res) => {
   const key = req.headers['adminkey'];
-  if (key !== "devina123") 
+  if (key !== "REMOTE@123") 
     return res.status(403).json({ error: "Access denied" });
 
   const all = await Participant.find();

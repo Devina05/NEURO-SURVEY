@@ -48,10 +48,12 @@ document.getElementById('loginBtn').onclick = async () => {
   else if (!p.day1TakenAt) {
     window.location = 'day1_passage.html';
   }
-  else {
-    // Day1 done (whether day2 done or not)
+  else if (!p.day2TakenAt) {
     window.location = 'day2_quiz.html';
-  } 
+  }
+  else {
+    window.location = 'profile.html';
+  }
 } else {
     alert(j.error || 'error');
   }
