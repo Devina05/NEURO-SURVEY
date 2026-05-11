@@ -160,7 +160,7 @@ app.post("/api/initialScore", auth, async (req, res) => {
     p.aiUseHours,
     p.sleepHours
   );
-  p.category = categoryFromScore(Math.round(p.normalizedScore));
+  p.category = categoryFromScore(p.initialScore);
   p.status = "initial_done";
 
   await p.save();
