@@ -216,7 +216,7 @@ app.post("/api/initialScore", auth, async (req, res) => {
     category: p.category,
     rules:
       group === "ai"
-        ? "AI GROUP: You may use AI on Day-1, but NOT on Day-2."
+        ? "AI GROUP: You are requested to use AI given in the survey on Day-1, but NOT on Day-2."
         : "NON-AI GROUP: You may NOT use AI on Day-1, and NOT on Day-2."
   });
 });
