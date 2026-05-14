@@ -533,6 +533,9 @@ app.post("/api/forgot-password", async (req, res) => {
   const user = await Participant.findOne({ email });
   console.log("User found:", !!user);
   if (!user) return res.json({ ok: true }); // don't reveal if email exists
+  if (user.resetTokenExpiry && user.resetTokenExpiry > Date.now() - (59 * 60 * 1000)) {
+  return res.status(429).json({ error: "Please wait 1 minute before requesting another reset link." });
+  }
 
   const token = crypto.randomBytes(32).toString("hex");
   user.resetToken = token;
