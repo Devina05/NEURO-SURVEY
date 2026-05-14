@@ -16,7 +16,7 @@ const Analysis = require("./models/Analysis");
 const ss = require("simple-statistics");
 
 const app = express();
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 const crypto = require("crypto");
 
 app.use(cors());
@@ -539,25 +539,19 @@ app.post("/api/forgot-password", async (req, res) => {
   user.resetTokenExpiry = Date.now() + 3600000; // 1 hour
   await user.save();
 
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-    }
-  });
+  const resend = new Resend(process.env.RESEND_API_KEY);
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:4000";
 const resetLink = `${BASE_URL}/reset-password.html?token=${token}`;
 
   try {
-  await transporter.sendMail({
-    from: process.env.EMAIL_USER,
-    to: user.email,
-    subject: "Password Reset — Neuro Survey",
-    html: `<p>Click the link below to reset your password. It expires in 1 hour.</p>
-           <a href="${resetLink}">${resetLink}</a>`
-  });
+  await resend.emails.send({
+  from: "onboarding@resend.dev",
+  to: user.email,
+  subject: "Password Reset — Neuro Survey",
+  html: `<p>Click the link below to reset your password. It expires in 1 hour.</p>
+         <a href="${resetLink}">${resetLink}</a>`
+});
   console.log("Email sent to:", user.email);
 } catch(e) {
   console.log("Email error:", e.message);
