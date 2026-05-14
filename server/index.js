@@ -529,7 +529,9 @@ app.get('/api/admin/dropout', async (req, res) => {
 
 app.post("/api/forgot-password", async (req, res) => {
   const { email } = req.body;
+  console.log("Forgot password request for:", email);
   const user = await Participant.findOne({ email });
+  console.log("User found:", !!user);
   if (!user) return res.json({ ok: true }); // don't reveal if email exists
 
   const token = crypto.randomBytes(32).toString("hex");
@@ -545,8 +547,10 @@ app.post("/api/forgot-password", async (req, res) => {
     }
   });
 
-  const resetLink = `http://localhost:4000/reset-password.html?token=${token}`;
+const BASE_URL = process.env.BASE_URL || "http://localhost:4000";
+const resetLink = `${BASE_URL}/reset-password.html?token=${token}`;
 
+  try {
   await transporter.sendMail({
     from: process.env.EMAIL_USER,
     to: user.email,
@@ -554,6 +558,10 @@ app.post("/api/forgot-password", async (req, res) => {
     html: `<p>Click the link below to reset your password. It expires in 1 hour.</p>
            <a href="${resetLink}">${resetLink}</a>`
   });
+  console.log("Email sent to:", user.email);
+} catch(e) {
+  console.log("Email error:", e.message);
+}
 
   res.json({ ok: true });
 });
