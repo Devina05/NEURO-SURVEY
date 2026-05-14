@@ -16,6 +16,8 @@ const Analysis = require("./models/Analysis");
 const ss = require("simple-statistics");
 
 const app = express();
+const nodemailer = require("nodemailer");
+const crypto = require("crypto");
 
 app.use(cors());
 app.use(express.json());
@@ -525,5 +527,53 @@ app.get('/api/admin/dropout', async (req, res) => {
   res.json(summary);
 });
 
+app.post("/api/forgot-password", async (req, res) => {
+  const { email } = req.body;
+  const user = await Participant.findOne({ email });
+  if (!user) return res.json({ ok: true }); // don't reveal if email exists
+
+  const token = crypto.randomBytes(32).toString("hex");
+  user.resetToken = token;
+  user.resetTokenExpiry = Date.now() + 3600000; // 1 hour
+  await user.save();
+
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS
+    }
+  });
+
+  const resetLink = `http://localhost:4000/reset-password.html?token=${token}`;
+
+  await transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to: user.email,
+    subject: "Password Reset — Neuro Survey",
+    html: `<p>Click the link below to reset your password. It expires in 1 hour.</p>
+           <a href="${resetLink}">${resetLink}</a>`
+  });
+
+  res.json({ ok: true });
+});
+
+app.post("/api/reset-password", async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  const user = await Participant.findOne({
+    resetToken: token,
+    resetTokenExpiry: { $gt: Date.now() }
+  });
+
+  if (!user) return res.status(400).json({ error: "Invalid or expired token" });
+
+  user.passwordHash = await bcrypt.hash(newPassword, 10);
+  user.resetToken = undefined;
+  user.resetTokenExpiry = undefined;
+  await user.save();
+
+  res.json({ ok: true });
+});
 // START SERVER
 app.listen(PORT, () => console.log("Server running on port", PORT));

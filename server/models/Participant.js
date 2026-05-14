@@ -31,7 +31,9 @@ aiRelianceRating: Number,
 aiHelpfulnessRating: Number,
 aiUsageDescription: String,
 
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
+  resetToken: String,
+resetTokenExpiry: Date,
 });
 
 module.exports = mongoose.model("Participant", ParticipantSchema);
