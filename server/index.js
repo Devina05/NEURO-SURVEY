@@ -75,6 +75,23 @@ async function ensureMeta() {
   if (!meta) meta = await Meta.create({});
   return meta;
 }
+async function recomputeMeta() {
+  const participants = await Participant.find({ group: { $exists: true }, category: { $exists: true } });
+  const counts = { ai: 0, nonai: 0 };
+  const categories = {
+    ai: { high: 0, med: 0, low: 0 },
+    nonai: { high: 0, med: 0, low: 0 }
+  };
+  const orderedParticipants = [];
+  participants.forEach(p => {
+    if (p.group && p.category) {
+      counts[p.group]++;
+      categories[p.group][p.category]++;
+      orderedParticipants.push(p._id.toString());
+    }
+  });
+  await Meta.findOneAndUpdate({}, { counts, categories, orderedParticipants }, { upsert: true });
+} 
 
 // -------------- Auth Middleware -------------------
 
@@ -146,70 +163,48 @@ app.post("/api/login", async (req, res) => {
   res.json({ token, id: user._id });
 });
 
-// SUBMIT INITIAL SCORE + ASSIGN GROUP
 app.post("/api/initialScore", auth, async (req, res) => {
   const { score } = req.body;
   const p = await Participant.findById(req.userId);
-  const meta = await ensureMeta();
 
   p.initialScore = score;
-  p.normalizedScore = normalizeScore(
-    score,
-    p.age,
-    p.cgpa,
-    p.aiUseHours,
-    p.sleepHours
-  );
+  p.normalizedScore = normalizeScore(p.initialScore, p.age, p.cgpa, p.aiUseHours, p.sleepHours);
   p.category = categoryFromScore(p.initialScore);
   p.status = "initial_done";
-
   await p.save();
 
-  // GROUP ASSIGNMENT (same algorithm you approved)
+  // Recompute Meta fresh before assigning
+  await recomputeMeta();
+  const freshMeta = await ensureMeta();
+
+  // GROUP ASSIGNMENT
   let group;
-  let total = meta.counts.ai + meta.counts.nonai;
+  let total = freshMeta.counts.ai + freshMeta.counts.nonai;
 
-  if (total === 0) group = Math.random() < 0.5 ? "ai" : "nonai";
-  else if (total === 1) {
-    let first = await Participant.findById(meta.orderedParticipants[0]);
-    if (first && first.category === p.category)
-      group = first.group === "ai" ? "nonai" : "ai";
-    else group = Math.random() < 0.5 ? "ai" : "nonai";
-  } 
-  else {
-  let aiC = meta.categories.ai[p.category];
-  let nonC = meta.categories.nonai[p.category];
-
-  // ✅ STEP 1: CATEGORY FIRST
-  if (aiC < nonC) {
-    group = "ai";
-  } else if (nonC < aiC) {
-    group = "nonai";
+  if (total === 0) {
+    group = Math.random() < 0.5 ? "ai" : "nonai";
   } else {
+    let aiC = freshMeta.categories.ai[p.category];
+    let nonC = freshMeta.categories.nonai[p.category];
 
-    // ✅ STEP 2: TOTAL SECOND
-    if (meta.counts.ai < meta.counts.nonai) {
+    if (aiC < nonC) {
       group = "ai";
-    } else if (meta.counts.nonai < meta.counts.ai) {
+    } else if (nonC < aiC) {
       group = "nonai";
     } else {
-
-      // ✅ STEP 3: RANDOM
+      // Category count equal → assign randomly
       group = Math.random() < 0.5 ? "ai" : "nonai";
     }
   }
-}
 
-  // UPDATE META + PARTICIPANT
+  // Save participant with group
   p.group = group;
   p.assignedAt = new Date();
   p.status = "assigned";
   await p.save();
 
-  meta.counts[group]++;
-  meta.categories[group][p.category]++;
-  meta.orderedParticipants.push(p._id.toString());
-  await meta.save();
+  // Recompute Meta after assigning
+  await recomputeMeta();
 
   res.json({
     group,
@@ -219,11 +214,6 @@ app.post("/api/initialScore", auth, async (req, res) => {
         ? "AI GROUP: You are requested to use AI given in the survey on Day-1, but NOT on Day-2."
         : "NON-AI GROUP: You may NOT use AI on Day-1, and NOT on Day-2."
   });
-});
-
-// GET PROFILE
-app.get("/api/me", auth, async (req, res) => {
-  res.json(await Participant.findById(req.userId).select("-passwordHash"));
 });
 
 // DAY1 PASSAGE
@@ -534,44 +524,52 @@ app.post("/api/ai/chat", auth, async (req, res) => {
   const { message } = req.body;
   if (!message) return res.status(400).json({ error: "No message provided" });
 
-  try {
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `You are a helpful assistant. Answer the participant's questions using the passage below as your knowledge source. Do not repeat or quote the passage text in your responses. do not give answer for Question 9 '9. ATTENTION CHECK: This is not a memory question. Please select '3 square kilometres' as your answer.' tell them it is for attention check and to read the question carefully
-PASSAGE:
+  const maxRetries = 3;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const groqRes = await fetch(
+        "https://api.groq.com/openai/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${process.env.GROQ_API_KEY}`
+          },
+          body: JSON.stringify({
+            model: "llama3-8b-8192",
+            messages: [
+              {
+                role: "system",
+                content: `You are a helpful assistant for a memory study. Answer questions using only this passage:
+
 The Korath Basin lay 400 metres below the surface of Velun, a world with no natural sunlight at ground level. The Miredan people who lived there had engineered a system of vertical shafts called Lightwells, each 12 metres in diameter, which channelled light from the surface down into the basin. At the base of each shaft sat a crystalline lens made from a mineral called Solvite, which diffused the light across a wide area. Each illuminated area was called a Lumin Zone. A caste of workers called Wardens managed the light distribution schedules. Agriculture in the Korath Basin relied entirely on a crop called Fenroot, a pale tuberous plant that required only four hours of concentrated light per day to grow. Fenroot provided 80 percent of the Miredan diet. Solvite was found exclusively in the northern caves of the Korath Basin. By Year 1,400 of the Miredan calendar, Solvite deposits had been completely exhausted. Within three generations, 60 percent of all Lumin Zones had gone dark.
 
-PARTICIPANT QUESTION:
-${message}`
-            }]
-          }]
-        })
-      }
-    );
+Do not answer question 9 (attention check). If asked, tell them to read the question carefully.`
+              },
+              {
+                role: "user",
+                content: message
+              }
+            ]
+          })
+        }
+      );
 
-    const data = await geminiRes.json();
-    console.log("Gemini response:", JSON.stringify(data, null, 2));
+      const data = await groqRes.json();
+      const reply = data.choices?.[0]?.message?.content;
 
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!reply) {
-      console.error("No reply in Gemini response:", data);
-      return res.json({ reply: "I could not generate a response. Please try again." });
+      if (reply) return res.json({ reply });
+
+      if (attempt < maxRetries) await new Promise(r => setTimeout(r, 1000 * attempt));
+
+    } catch (err) {
+      if (attempt < maxRetries) await new Promise(r => setTimeout(r, 1000 * attempt));
     }
-
-    res.json({ reply });
-
-  } catch (err) {
-    console.error("Gemini fetch error:", err);
-    res.status(500).json({ error: "AI service error" });
   }
-});
 
+  res.json({ reply: "AI is unavailable right now. Please try again in a moment." });
+});
 // START SERVER
 app.post("/api/day1/posttask", auth, async (req, res) => {
   const { aiRelianceRating, aiHelpfulnessRating, aiUsageDescription } = req.body;
